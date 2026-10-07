@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.0.0] — GALACTIC EXPANSION — 2026-10-08
+
+### Changed
+- The repository now lives under the **vaked-omni-chan** organisation — the
+  constellation's new home. Same binary, wider orbit: install URLs, the GHCR
+  image, and the crate repository all point at `vaked-omni-chan/portail`.
+
+### Notes
+- No source changes in this release; it is the move and the version it carries.
+
 ## [1.4.0] - 2026-06-26
 
 ### Added

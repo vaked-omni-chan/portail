@@ -9,14 +9,14 @@
 <p align="center">
   <a href="https://crates.io/crates/portail"><img src="https://img.shields.io/crates/v/portail" alt="Crates.io"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
-  <a href="https://github.com/peterlodri-sec/portail"><img src="https://img.shields.io/badge/language-Rust-orange" alt="Language: Rust"></a>
+  <a href="https://github.com/vaked-omni-chan/portail"><img src="https://img.shields.io/badge/language-Rust-orange" alt="Language: Rust"></a>
 </p>
 
 <p align="center">
   <a href="https://pocoo.vaked.dev">Blog</a> · <a href="https://github.com/peterlodri-sec">GitHub</a> · <a href="https://x.com/0xp3t3rl">X/Twitter</a> · <a href="https://patreon.com/vaked">Patreon</a> · <a href="https://chat.vaked.dev">Chat</a>
 </p>
 
-> **v2.1.0** · 0 compiler warnings · 7 CI agents · MIT-licensed since 2026.
+> **v3.0.0 — GALACTIC EXPANSION** · 0 compiler warnings · 7 CI agents · MIT-licensed since 2026.
 > Read the philosophy: [`PHILOSOPHY.md`](PHILOSOPHY.md)
 
 Portail is a high-performance, self-hosted proxy and gateway giving you a single
@@ -74,7 +74,7 @@ curl http://localhost:8787/dashboard | jq
 |--------|---------|
 | Cargo | `cargo install portail` |
 | Nix | `nix profile install github:peterlodri-sec/portail` |
-| Docker | `docker run -p 8787:8787 ghcr.io/peterlodri-sec/portail:latest` |
+| Docker | `docker run -p 8787:8787 ghcr.io/vaked-omni-chan/portail:latest` |
 | Quick script | `curl -fsSL https://raw.githubusercontent.com/peterlodri-sec/portail/main/scripts/install.sh \| bash` |
 | From source | `git clone && cargo build --release` |
 

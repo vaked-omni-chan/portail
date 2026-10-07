@@ -6,11 +6,11 @@ members = [".", "crates/pkg-ctx", "crates/portail-agents", "crates/portail-claud
 edition = "2024"
 rust-version = "1.85"
 license = "MIT"
-repository = "https://github.com/peterlodri-sec/portail"
+repository = "https://github.com/vaked-omni-chan/portail"
 
 [package]
 name = "portail"
-version = "2.1.0"
+version = "3.0.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
