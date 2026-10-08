@@ -208,8 +208,8 @@ pub async fn run_spec_verify(config: &SpecVerifyConfig) -> SpecVerifyReport {
 pub fn build_spec_verify_agent(
     config: &SpecVerifyConfig,
 ) -> anyhow::Result<Arc<dyn adk_rust::prelude::Agent>> {
-    use adk_rust::prelude::*;
     use adk_rust::InvocationContext;
+    use adk_rust::prelude::*;
 
     let golden_path = config.golden_path.clone();
 

@@ -46,38 +46,39 @@ pub struct PromptStore {
 }
 
 impl PromptStore {
+    // rusqlite's `Connection` is `!Sync`; it is shared behind an `RwLock` for
+    // interior mutability inside this store and never sent across threads.
+    #[allow(clippy::arc_with_non_send_sync)]
     pub fn new(db_path: &Path) -> anyhow::Result<Self> {
-        let conn = if db_path.exists() {
-            Connection::open(db_path)?
-        } else {
-            let conn = Connection::open(db_path)?;
-            conn.execute_batch(
-                "CREATE TABLE IF NOT EXISTS prompt_commits (
-                    hash TEXT PRIMARY KEY,
-                    parent_hash TEXT,
-                    branch TEXT NOT NULL,
-                    message TEXT NOT NULL,
-                    content TEXT NOT NULL,
-                    created_at TEXT NOT NULL,
-                    author TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS prompt_tags (
-                    name TEXT PRIMARY KEY,
-                    commit_hash TEXT NOT NULL,
-                    created_at TEXT NOT NULL,
-                    FOREIGN KEY (commit_hash) REFERENCES prompt_commits(hash)
-                );
-                CREATE TABLE IF NOT EXISTS prompt_branches (
-                    name TEXT PRIMARY KEY,
-                    head_hash TEXT NOT NULL,
-                    updated_at TEXT NOT NULL,
-                    FOREIGN KEY (head_hash) REFERENCES prompt_commits(hash)
-                );
-                CREATE INDEX IF NOT EXISTS idx_commits_branch ON prompt_commits(branch);
-                CREATE INDEX IF NOT EXISTS idx_commits_created ON prompt_commits(created_at);",
-            )?;
-            conn
-        };
+        // Open the database and ensure the schema exists. Runs unconditionally
+        // so an existing-but-empty file still gets its tables (see the same
+        // pattern in cost_attribution / semantic_cache).
+        let conn = Connection::open(db_path)?;
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS prompt_commits (
+                hash TEXT PRIMARY KEY,
+                parent_hash TEXT,
+                branch TEXT NOT NULL,
+                message TEXT NOT NULL,
+                content TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                author TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS prompt_tags (
+                name TEXT PRIMARY KEY,
+                commit_hash TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (commit_hash) REFERENCES prompt_commits(hash)
+            );
+            CREATE TABLE IF NOT EXISTS prompt_branches (
+                name TEXT PRIMARY KEY,
+                head_hash TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (head_hash) REFERENCES prompt_commits(hash)
+            );
+            CREATE INDEX IF NOT EXISTS idx_commits_branch ON prompt_commits(branch);
+            CREATE INDEX IF NOT EXISTS idx_commits_created ON prompt_commits(created_at);",
+        )?;
 
         Ok(Self {
             conn: Arc::new(RwLock::new(conn)),
@@ -262,7 +263,10 @@ mod tests {
 
     fn test_store() -> PromptStore {
         let tmp = NamedTempFile::new().unwrap();
-        PromptStore::new(tmp.path()).unwrap()
+        // Persist the file: a plain NamedTempFile deletes itself on drop, which
+        // would remove the database out from under the connection.
+        let (_file, path) = tmp.keep().unwrap();
+        PromptStore::new(&path).unwrap()
     }
 
     #[test]

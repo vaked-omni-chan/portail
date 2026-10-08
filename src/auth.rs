@@ -202,7 +202,7 @@ impl AuthState {
             for (kid, key) in &inner.jwk_map {
                 let v = validation.clone();
                 if let Ok(data) = decode::<Claims>(token, key, &v) {
-                    return data.claims.sub.map(String::from);
+                    return data.claims.sub;
                 }
                 // Also try without key ID
                 let _ = kid;

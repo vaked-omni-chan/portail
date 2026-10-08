@@ -4018,7 +4018,7 @@ checksum = "c33a9471896f1c69cecef8d20cbe2f7accd12527ce60845ff44c153bb2a21b49"
 
 [[package]]
 name = "portail"
-version = "2.1.0"
+version = "3.0.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -4056,7 +4056,6 @@ dependencies = [
  "opentelemetry_sdk",
  "pkg-ctx",
  "portail-agents",
- "portail-claude-plugins",
  "portail-mcp-wasm",
  "portail-plugin-sdk",
  "portail-vaked",
@@ -4072,6 +4071,7 @@ dependencies = [
  "sha2 0.10.9",
  "sqlx",
  "sysinfo",
+ "tempfile",
  "thiserror 2.0.18",
  "tikv-jemallocator",
  "tokio",
@@ -4081,7 +4081,6 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-appender",
- "tracing-opentelemetry",
  "tracing-subscriber",
  "utoipa",
  "utoipa-axum",
@@ -6307,22 +6306,6 @@ dependencies = [
  "log",
  "once_cell",
  "tracing-core",
-]
-
-[[package]]
-name = "tracing-opentelemetry"
-version = "0.33.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "adbc64cba7137545b8044cb1fe9814f7aacf3c6b5f9b45be8bb5db538befdb26"
-dependencies = [
- "js-sys",
- "opentelemetry",
- "smallvec",
- "tracing",
- "tracing-core",
- "tracing-log",
- "tracing-subscriber",
- "web-time",
 ]
 
 [[package]]

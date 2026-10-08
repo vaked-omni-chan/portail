@@ -439,8 +439,8 @@ async fn route_to_ai_gateway(State(state): State<Arc<AppState>>, req: Request) -
 
     let mut req = req;
     if let Some(ref key) = target_api_key {
-        let resolved_key = if key.starts_with('$') {
-            std::env::var(&key[1..]).unwrap_or_else(|_| key.clone())
+        let resolved_key = if let Some(var_name) = key.strip_prefix('$') {
+            std::env::var(var_name).unwrap_or_else(|_| key.clone())
         } else {
             key.clone()
         };
@@ -717,10 +717,7 @@ mod tests {
             loop_runner: loopeng::SharedLoopEngine::new(loopeng::LoopEngineConfig::default()),
             inference_engine: None,
             pkg_ctx_memory: tokio::sync::Mutex::new(pkg_ctx::memory::PkgCtxMemory::new().unwrap()),
-            base_hooks: Arc::new(crate::base_hooks::default_registry()),
-            tool_registry: Arc::new(std::sync::RwLock::new(
-                portail_claude_plugins::bridge::ToolRegistry::new(),
-            )),
+            a2a_registry: Arc::new(crate::a2a::registry::AgentRegistry::new()),
         })
     }
 
