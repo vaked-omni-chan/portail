@@ -14,11 +14,35 @@ use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 /// Returns a guard that flushes on drop and the log directory path.
 /// Uses tracing-appender for async file I/O off the main thread.
 pub fn init_logging() -> (tracing_appender::non_blocking::WorkerGuard, String) {
-    let log_dir = std::env::var("PORTAIL_LOG_DIR").unwrap_or_else(|_| "/var/log/portail".into());
-    let _ = std::fs::create_dir_all(&log_dir);
+    // Prefer a location the invoking user can actually write to. `/var/log` is
+    // root-only on most systems, and a panic here would abort every CLI
+    // invocation (including `--version`) before clap ever parses an argument.
+    let log_dir = std::env::var("PORTAIL_LOG_DIR").unwrap_or_else(|_| {
+        std::env::var("XDG_STATE_HOME")
+            .map(|base| format!("{base}/portail/logs"))
+            .ok()
+            .or_else(|| {
+                std::env::var("HOME")
+                    .ok()
+                    .map(|home| format!("{home}/.portail/logs"))
+            })
+            .unwrap_or_else(|| "/var/log/portail".to_string())
+    });
 
-    let file_appender = tracing_appender::rolling::hourly(&log_dir, "portail.log");
-    let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+    let (non_blocking, guard) = match std::fs::create_dir_all(&log_dir) {
+        Ok(()) => {
+            let file_appender = tracing_appender::rolling::hourly(&log_dir, "portail.log");
+            tracing_appender::non_blocking(file_appender)
+        }
+        Err(err) => {
+            // Degrade to stderr instead of panicking: logging must never be the
+            // reason the binary fails to start.
+            eprintln!(
+                "portail: could not create log directory {log_dir} ({err}); logging to stderr"
+            );
+            tracing_appender::non_blocking(std::io::stderr())
+        }
+    };
 
     let filter = EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into());
 
@@ -101,16 +125,13 @@ pub fn init(config: &TelemetryConfig) -> Option<OtelGuard> {
         .with_batch_exporter(exporter)
         .with_resource(
             Resource::builder()
-                .with_attribute(KeyValue::new(
-                    "service.name",
-                    config.service_name.clone(),
-                ))
+                .with_attribute(KeyValue::new("service.name", config.service_name.clone()))
                 .build(),
         )
         .with_sampler(sampler)
         .build();
 
-    let _ = opentelemetry::global::set_tracer_provider(provider.clone());
+    opentelemetry::global::set_tracer_provider(provider.clone());
 
     tracing::info!(
         endpoint = %config.endpoint, service = %config.service_name,

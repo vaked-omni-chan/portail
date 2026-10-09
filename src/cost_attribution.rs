@@ -84,41 +84,43 @@ pub struct CostStore {
 }
 
 impl CostStore {
+    // rusqlite's `Connection` is `!Sync`; it is shared behind an `RwLock` for
+    // interior mutability inside this store and never sent across threads.
+    #[allow(clippy::arc_with_non_send_sync)]
     pub fn new(db_path: &Path) -> anyhow::Result<Self> {
-        let conn = if db_path.exists() {
-            Connection::open(db_path)?
-        } else {
-            let conn = Connection::open(db_path)?;
-            conn.execute_batch(
-                "CREATE TABLE IF NOT EXISTS request_costs (
-                    id TEXT PRIMARY KEY,
-                    session_id TEXT NOT NULL,
-                    user_id TEXT NOT NULL,
-                    model TEXT NOT NULL,
-                    provider TEXT NOT NULL,
-                    input_tokens INTEGER NOT NULL,
-                    output_tokens INTEGER NOT NULL,
-                    cache_read_tokens INTEGER NOT NULL DEFAULT 0,
-                    cache_write_tokens INTEGER NOT NULL DEFAULT 0,
-                    cost_cents INTEGER NOT NULL,
-                    latency_ms INTEGER NOT NULL,
-                    timestamp TEXT NOT NULL
-                );
-                CREATE INDEX IF NOT EXISTS idx_costs_session ON request_costs(session_id);
-                CREATE INDEX IF NOT EXISTS idx_costs_user ON request_costs(user_id);
-                CREATE INDEX IF NOT EXISTS idx_costs_model ON request_costs(model);
-                CREATE INDEX IF NOT EXISTS idx_costs_timestamp ON request_costs(timestamp);
+        // Open the database and ensure the schema exists. The migration runs
+        // unconditionally: an existing but empty file (a fresh `touch`, or a
+        // crash before the first write) would otherwise leave the tables
+        // missing, and every query would fail with "no such table".
+        let conn = Connection::open(db_path)?;
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS request_costs (
+                id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                model TEXT NOT NULL,
+                provider TEXT NOT NULL,
+                input_tokens INTEGER NOT NULL,
+                output_tokens INTEGER NOT NULL,
+                cache_read_tokens INTEGER NOT NULL DEFAULT 0,
+                cache_write_tokens INTEGER NOT NULL DEFAULT 0,
+                cost_cents INTEGER NOT NULL,
+                latency_ms INTEGER NOT NULL,
+                timestamp TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_costs_session ON request_costs(session_id);
+            CREATE INDEX IF NOT EXISTS idx_costs_user ON request_costs(user_id);
+            CREATE INDEX IF NOT EXISTS idx_costs_model ON request_costs(model);
+            CREATE INDEX IF NOT EXISTS idx_costs_timestamp ON request_costs(timestamp);
 
-                CREATE TABLE IF NOT EXISTS model_pricing (
-                    model TEXT PRIMARY KEY,
-                    input_per_1m INTEGER NOT NULL,
-                    output_per_1m INTEGER NOT NULL,
-                    cache_read_per_1m INTEGER NOT NULL DEFAULT 0,
-                    cache_write_per_1m INTEGER NOT NULL DEFAULT 0
-                );",
-            )?;
-            conn
-        };
+            CREATE TABLE IF NOT EXISTS model_pricing (
+                model TEXT PRIMARY KEY,
+                input_per_1m INTEGER NOT NULL,
+                output_per_1m INTEGER NOT NULL,
+                cache_read_per_1m INTEGER NOT NULL DEFAULT 0,
+                cache_write_per_1m INTEGER NOT NULL DEFAULT 0
+            );",
+        )?;
 
         // Load pricing
         let pricing = Self::load_pricing(&conn)?;
@@ -315,7 +317,10 @@ mod tests {
 
     fn test_store() -> CostStore {
         let tmp = NamedTempFile::new().unwrap();
-        CostStore::new(tmp.path()).unwrap()
+        // Persist the file: a plain NamedTempFile deletes itself on drop, which
+        // would remove the database out from under the connection.
+        let (_file, path) = tmp.keep().unwrap();
+        CostStore::new(&path).unwrap()
     }
 
     #[test]
@@ -328,7 +333,7 @@ mod tests {
             cache_write_per_1m: 3750,
         };
         let cost = pricing.compute_cost(1000, 500, 2000, 0);
-        assert_eq!(cost, 3 + 3 + 3 + 0); // 9 cents
+        assert_eq!(cost, 3 + 3 + 3); // input + output + cache_read; 9 cents
     }
 
     #[test]

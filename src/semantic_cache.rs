@@ -45,28 +45,29 @@ pub struct SemanticCache {
 }
 
 impl SemanticCache {
+    // rusqlite's `Connection` is `!Sync`; it is shared behind an `RwLock` for
+    // interior mutability inside this store and never sent across threads.
+    #[allow(clippy::arc_with_non_send_sync)]
     pub fn new(db_path: &Path, default_threshold: f32) -> anyhow::Result<Self> {
-        let conn = if db_path.exists() {
-            Connection::open(db_path)?
-        } else {
-            let conn = Connection::open(db_path)?;
-            conn.execute_batch(
-                "CREATE TABLE IF NOT EXISTS semantic_cache (
-                    id TEXT PRIMARY KEY,
-                    prompt TEXT NOT NULL,
-                    response TEXT NOT NULL,
-                    model TEXT NOT NULL,
-                    embedding BLOB NOT NULL,
-                    similarity_threshold REAL NOT NULL,
-                    hit_count INTEGER NOT NULL DEFAULT 0,
-                    created_at TEXT NOT NULL,
-                    last_accessed TEXT NOT NULL
-                );
-                CREATE INDEX IF NOT EXISTS idx_cache_model ON semantic_cache(model);
-                CREATE INDEX IF NOT EXISTS idx_cache_created ON semantic_cache(created_at);",
-            )?;
-            conn
-        };
+        // Open the database and ensure the schema exists. Runs unconditionally
+        // so an existing-but-empty file still gets its tables (see the same
+        // pattern in cost_attribution / prompt_versioning).
+        let conn = Connection::open(db_path)?;
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS semantic_cache (
+                id TEXT PRIMARY KEY,
+                prompt TEXT NOT NULL,
+                response TEXT NOT NULL,
+                model TEXT NOT NULL,
+                embedding BLOB NOT NULL,
+                similarity_threshold REAL NOT NULL,
+                hit_count INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL,
+                last_accessed TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_cache_model ON semantic_cache(model);
+            CREATE INDEX IF NOT EXISTS idx_cache_created ON semantic_cache(created_at);",
+        )?;
 
         Ok(Self {
             conn: Arc::new(RwLock::new(conn)),
@@ -241,7 +242,10 @@ mod tests {
 
     fn test_cache() -> SemanticCache {
         let tmp = NamedTempFile::new().unwrap();
-        SemanticCache::new(tmp.path(), 0.9).unwrap()
+        // Persist the file: a plain NamedTempFile deletes itself on drop, which
+        // would remove the database out from under the connection.
+        let (_file, path) = tmp.keep().unwrap();
+        SemanticCache::new(&path, 0.9).unwrap()
     }
 
     #[test]

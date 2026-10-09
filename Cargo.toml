@@ -19,6 +19,7 @@ repository.workspace = true
 keywords = ["proxy", "gateway", "ai", "mcp", "cdn"]
 categories = ["web-programming::http-server", "network-programming", "caching"]
 readme = "README.md"
+default-run = "portail"
 
 [dependencies]
 axum = { version = "=0.8.9", features = ["macros", "ws"] }
@@ -55,7 +56,6 @@ loop-state-manager = { path = "crates/loop-state-manager" }
 loopeng = { path = "crates/loopeng" }
 pkg-ctx = { path = "crates/pkg-ctx" }
 portail-mcp-wasm = { path = "crates/portail-mcp-wasm" }
-portail-claude-plugins = { path = "crates/portail-claude-plugins" }
 rustc-hash = "=2.1.2"
 chrono = { version = "=0.4.45", features = ["serde"] }
 regex = "=1.12.4"
@@ -105,7 +105,6 @@ thiserror = "2"
 opentelemetry = "=0.32.0"
 opentelemetry_sdk = { version = "=0.32.1", features = ["rt-tokio"] }
 opentelemetry-otlp = { version = "=0.32.0", features = ["grpc-tonic", "metrics"] }
-tracing-opentelemetry = "=0.33.0"
 
 # v0.6 — GraphQL API
 async-graphql = "=7.2.1"
@@ -166,10 +165,10 @@ proptest = "=1.11.0"
 loopeng = { path = "crates/loopeng" }
 pkg-ctx = { path = "crates/pkg-ctx" }
 tokio = { workspace = true }
+tempfile = "=3.27.0"
 
 [build-dependencies]
 chrono = "=0.4.45"
-utoipa = "5"
 
 [[bench]]
 name = "hot_paths"
