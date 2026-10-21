@@ -1,3 +1,5 @@
+cargo-features = ["codegen-backend"]
+
 [workspace]
 resolver = "2"
 members = [".", "crates/pkg-ctx", "crates/portail-agents", "crates/portail-claude-plugins", "crates/portail-plugin-sdk", "crates/portail-vaked", "crates/loop-state-manager", "crates/loopeng", "crates/portail-mcp-wasm"]
@@ -20,6 +22,11 @@ keywords = ["proxy", "gateway", "ai", "mcp", "cdn"]
 categories = ["web-programming::http-server", "network-programming", "caching"]
 readme = "README.md"
 default-run = "portail"
+
+[lib]
+test = true
+doctest = true
+bench = true
 
 [dependencies]
 axum = { version = "=0.8.9", features = ["macros", "ws"] }

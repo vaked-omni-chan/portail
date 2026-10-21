@@ -1,21 +1,30 @@
 # Portail — Hyper-Optimized Cargo Configuration
 # Nix-first, native performance.
 
-# ── Linux: wild linker (unbelievably fast) ─────────────────────
-[target.x86_64-unknown-linux-gnu]
-linker = "clang"
-rustflags = ["-C", "link-arg=-fuse-ld=wild"]
-
-[target.aarch64-unknown-linux-gnu]
-linker = "clang"
-rustflags = ["-C", "link-arg=-fuse-ld=wild"]
-
 # ── Nightly compiler flags ─────────────────────────────────────
 [build]
+# Note: These act as defaults, but are overridden by target-specific rustflags below.
 rustflags = ["-Zshare-generics=y", "-Zthreads=0"]
 
 [rustdoc]
 rustflags = ["-Zunstable-options", "--generate-link-to-definition"]
+
+# ── Linux: wild linker & merged nightly flags ──────────────────
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = [
+    "-C", "link-arg=-fuse-ld=wild",
+    "-Zshare-generics=y", 
+    "-Zthreads=0"
+]
+
+[target.aarch64-unknown-linux-gnu]
+linker = "clang"
+rustflags = [
+    "-C", "link-arg=-fuse-ld=wild",
+    "-Zshare-generics=y", 
+    "-Zthreads=0"
+]
 
 # ── Profiles ───────────────────────────────────────────────────
 [profile.release]
@@ -24,6 +33,7 @@ lto = "fat"
 codegen-units = 1
 strip = "symbols"
 debug = false
+panic = "abort" # Tweak: Strips panic unwinding infra for smaller/faster binaries
 
 [profile.dev]
 opt-level = 0
@@ -32,9 +42,15 @@ split-debuginfo = "off"
 incremental = true
 codegen-units = 256
 
+# Nightly Tweak: Use Cranelift for backend workspace crates, LLVM for deps
+# Requires adding `cargo-features = ["codegen-backend"]` at the very top of your root Cargo.toml
+codegen-backend = "cranelift" 
+
 [profile.dev.package."*"]
 opt-level = 3
 debug = false
+# Ensures dependencies are still optimized via LLVM while your code uses Cranelift
+codegen-backend = "llvm" 
 
 [profile.test]
 opt-level = 0
@@ -54,8 +70,3 @@ opt-level = 3
 lto = "fat"
 codegen-units = 1
 debug = false
-
-[lib]
-test = true
-doctest = true
-bench = true
